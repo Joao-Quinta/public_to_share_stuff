@@ -1,0 +1,77 @@
+commands to launch network + explorer + package/endorse/install/invoke chaincode
+
+(reset) 
+./network down
+docker-compose down
+docker volume prune
+
+
+(1) launch network & create channel (terminal 1)
+
+cd /home/fabric/go/src/github.com/Joao-Quinta/2-fabric-samples/test-network
+./network.sh up
+./network.sh createChannel
+
+
+(2) copy crypto files & launch explorer (terminal 2)
+
+cd /home/fabric/go/src/github.com/Joao-Quinta/fabric-explorer
+cp -r ../2-fabric-samples/test-network/organizations/ .
+docker-compose up
+
+(3) launch browser localhost:8080
+
+
+(4) get dependencies (terminal 3)
+
+go mod init
+go mod tidy
+GO111MODULE=on go mod vendor
+
+(5) test binaries (terminal 1)
+export PATH=${PWD}/../bin:$PATH
+export FABRIC_CFG_PATH=$PWD/../config/
+test --> peer version
+
+(6) package code
+peer lifecycle chaincode package simple.tar.gz --path ../chaincode/ --lang golang --label simple_1.0
+
+
+(7) install chaincode in each peer --> need to do twice
+
+---- for organization 1
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID="Org1MSP"
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+export CORE_PEER_ADDRESS=localhost:7051
+----
+
+---- for organization 2
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID="Org2MSP"
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
+export CORE_PEER_ADDRESS=localhost:9051
+----
+
+peer lifecycle chaincode install simple.tar.gz
+
+(8) approve chaincode for organiaztion --> need to do twice
+
+peer lifecycle chaincode queryinstalled --> get package id (same for all organizations/peers)
+EXAMPLE OF ID --> simple_1.0:591a75ceb88e89d4b95c18be0f7bfb14b206566b340e3375b61853a53bb190e2
+export CC_PACKAGE_ID=simple_1.0:591a75ceb88e89d4b95c18be0f7bfb14b206566b340e3375b61853a53bb190e2
+
+peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name simple --version 1.0 --package-id $CC_PACKAGE_ID --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem"
+
+(9) check if chaincode is ready to be commited 
+peer lifecycle chaincode checkcommitreadiness --channelID mychannel --name simple --version 1.0 --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" --output json
+
+peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --channelID mychannel --name simple --version 1.0 --sequence 1 --tls --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" --peerAddresses localhost:7051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" --peerAddresses localhost:9051 --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
+
+(10) check browser + check from terminal
+peer lifecycle chaincode querycommitted --channelID mychannel --name simple
+
+(11) invoke code --> check browser
+peer chaincode invoke -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile ${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem -C mychannel -n simple --peerAddresses localhost:7051 --tlsRootCertFiles ${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt -c '{"Args":["put", "this_is_key", "this_is_the_value"]}'

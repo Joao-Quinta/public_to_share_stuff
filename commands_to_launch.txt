@@ -1,0 +1,25 @@
+run whole:
+
+localhost:8080
+
+terminal 1:
+cd /home/fabric/go/src/github.com/Joao-Quinta/2-fabric-samples/test-network/my_shell_scripts
+./mySetup.sh all
+
+
+terminal 2:
+cd /home/fabric/go/src/github.com/Joao-Quinta/2-fabric-samples/test-network/my_shell_scripts
+./chaincodeSetup.sh
+
+
+terminal 3:
+cd /home/fabric/go/src/github.com/Joao-Quinta/travail_master_java
+gradle build & gradle run
+
+
+
+
+SHUT DOWN
+
+cd /home/fabric/go/src/github.com/Joao-Quinta/2-fabric-samples/test-network/my_shell_scripts
+./mySetup.sh OFF

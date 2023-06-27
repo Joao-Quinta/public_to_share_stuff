@@ -4,3 +4,7 @@ git add --all
 git commit -m "Initial Commit"
 git remote add origin https://bitbucket.svc.elca.ch/scm/iot-internship-dt/blue-city-fabric.git
 git push -u origin HEAD:main
+
+
+
+git clone https://bitbucket.svc.elca.ch/scm/iot-internship-dt/blue-city-fabric.git
